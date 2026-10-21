@@ -1,0 +1,21 @@
+---
+import Layout from './Layout.astro';
+
+interface Props {
+  frontmatter: {
+    title: string;
+    description?: string;
+    updated?: string;
+  };
+}
+
+const { title, description, updated } = Astro.props.frontmatter;
+---
+
+<Layout title={title} description={description}>
+  <article class="prose prose-lg max-w-none">
+    <h1>{title}</h1>
+    {updated && <p class="text-sm text-gray-500">Last updated: {updated}</p>}
+    <slot />
+  </article>
+</Layout>

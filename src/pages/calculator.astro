@@ -1,0 +1,118 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="Calculator"
+  description="Calculate the premium and value tree of your Innovation Option."
+>
+  <h1 class="text-4xl font-bold tracking-tight">Calculator</h1>
+  <p class="mt-4 text-lg">Calculate the premium and value tree of your Innovation Option.</p>
+
+  <form id="calculator" class="mt-8 grid gap-4 sm:grid-cols-2">
+    <label class="flex flex-col gap-1 text-sm font-medium">
+      Strike ($)
+      <input name="strike" type="number" min="0" step="any" value="20000000" required
+        class="rounded-md border border-gray-300 px-3 py-2 text-base font-normal" />
+    </label>
+    <label class="flex flex-col gap-1 text-sm font-medium">
+      Term (years)
+      <input name="term" type="number" min="0" step="any" value="1" required
+        class="rounded-md border border-gray-300 px-3 py-2 text-base font-normal" />
+    </label>
+    <label class="flex flex-col gap-1 text-sm font-medium">
+      Tranches
+      <input name="tranches" type="number" min="1" step="1" value="4" required
+        class="rounded-md border border-gray-300 px-3 py-2 text-base font-normal" />
+    </label>
+    <label class="flex flex-col gap-1 text-sm font-medium">
+      Sigma (volatility)
+      <input name="sigma" type="number" min="0" step="any" value="0.75" required
+        class="rounded-md border border-gray-300 px-3 py-2 text-base font-normal" />
+    </label>
+    <div class="sm:col-span-2">
+      <button type="submit"
+        class="rounded-md bg-gray-900 px-6 py-3 font-semibold text-white hover:bg-gray-700 disabled:opacity-50">
+        Calculate
+      </button>
+    </div>
+  </form>
+
+  <p id="calculator-status" role="status" class="mt-6 text-sm text-gray-500"></p>
+  <div id="calculator-output" class="mt-6 space-y-8"></div>
+</Layout>
+
+<script>
+  import { getCompound, type Tranche, type ValueTree } from '../lib/option';
+
+  const RATE = 0.05;
+  const ITERATIONS = 4;
+
+  const form = document.querySelector<HTMLFormElement>('#calculator')!;
+  const status = document.querySelector<HTMLElement>('#calculator-status')!;
+  const output = document.querySelector<HTMLElement>('#calculator-output')!;
+
+  const integer = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+
+  function el<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) {
+    const node = document.createElement(tag);
+    if (text !== undefined) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+  }
+
+  // One column per iteration, values stacked highest (most up-moves) first.
+  function renderTree(tree: ValueTree, iterations: number) {
+    const table = el('table', undefined, 'border-collapse text-sm');
+    const headRow = el('tr');
+    const bodyRow = el('tr');
+    for (let i = 0; i <= iterations; i++) {
+      headRow.append(el('th', String(i), 'border-b border-gray-300 px-3 py-2 text-left'));
+      const cell = el('td', undefined, 'px-3 py-2 align-middle tabular-nums');
+      const moves = Object.keys(tree[i]).sort((a, b) => Number(b) - Number(a));
+      for (const m of moves) {
+        cell.append(el('div', integer.format(Math.round(tree[i][Number(m)]))));
+      }
+      bodyRow.append(cell);
+    }
+    const thead = el('thead');
+    const tbody = el('tbody');
+    thead.append(headRow);
+    tbody.append(bodyRow);
+    table.append(thead, tbody);
+    const wrapper = el('div', undefined, 'overflow-x-auto');
+    wrapper.append(table);
+    return wrapper;
+  }
+
+  function render(tranches: Tranche[]) {
+    output.replaceChildren();
+    for (const t of tranches) {
+      const section = el('section');
+      section.append(
+        el('p', `Premium: $${integer.format(Math.trunc(t.premium))}`, 'font-semibold'),
+        el('p', `Term: ${integer.format(Math.trunc(t.term * 365))} days`),
+        renderTree(t.valueTree, t.iterations),
+      );
+      output.append(section);
+    }
+  }
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const values = new FormData(form);
+    const strike = Number(values.get('strike'));
+    const term = Number(values.get('term'));
+    const sigma = Number(values.get('sigma'));
+    const tranches = Math.trunc(Number(values.get('tranches')));
+
+    if (!(strike > 0 && term > 0 && sigma > 0 && tranches >= 1)) {
+      output.replaceChildren();
+      status.textContent = 'Strike, term, sigma and tranches must all be greater than zero.';
+      return;
+    }
+
+    status.textContent = '';
+    render(getCompound({ rate: RATE, strike, term, iterations: ITERATIONS, sigma, tranches }));
+  });
+</script>

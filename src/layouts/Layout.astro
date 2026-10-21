@@ -1,10 +1,25 @@
 ---
+import '../styles/global.css';
+
 interface Props {
   title: string;
   description?: string;
 }
 
 const { title, description = 'Innovation Options' } = Astro.props;
+const pageTitle = title === 'Innovation Options' ? title : `${title} | Innovation Options`;
+
+const nav = [
+  { href: '/learn', label: 'Learn' },
+  { href: '/calculator', label: 'Calculator' },
+];
+const footerNav = [
+  { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
+  { href: '/privacy', label: 'Privacy' },
+  { href: '/terms', label: 'Terms' },
+];
+const year = new Date().getFullYear();
 ---
 
 <!doctype html>
@@ -15,9 +30,23 @@ const { title, description = 'Innovation Options' } = Astro.props;
     <meta name="description" content={description} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
-    <title>{title}</title>
+    <title>{pageTitle}</title>
   </head>
-  <body>
-    <slot />
+  <body class="flex min-h-screen flex-col">
+    <header class="mx-auto flex w-full max-w-2xl items-center justify-between px-6 py-6">
+      <a href="/" class="font-semibold">Innovation Options</a>
+      <nav class="flex gap-6 text-sm">
+        {nav.map((item) => <a href={item.href} class="hover:underline">{item.label}</a>)}
+      </nav>
+    </header>
+    <main class="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
+      <slot />
+    </main>
+    <footer class="mx-auto flex w-full max-w-2xl flex-col gap-2 px-6 py-8 text-sm text-gray-500 sm:flex-row sm:justify-between">
+      <p>&copy; {year} Innovation Options LLC. All rights reserved.</p>
+      <nav class="flex gap-4">
+        {footerNav.map((item) => <a href={item.href} class="hover:underline">{item.label}</a>)}
+      </nav>
+    </footer>
   </body>
 </html>
